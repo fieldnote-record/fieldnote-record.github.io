@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Turntable Recorder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Fieldnote. Left-aligned serif lead over paper; each step is a row with a
+   narrow label column and a wide working column; hairlines, no shadows. */
+:root {
+  --paper: #f6f1e7; --surface: #fffdf8; --ink: #1f2a24; --muted: #5b625c;
+  --line: #ddd4c4; --forest: #24493a; --forest-hover: #1d3c30; --on-forest: #f6f1e7;
+  --terracotta: #a84a29; --mustard: #e3b448; --danger: #a3302a;
+  --serif: "Fraunces", Georgia, "Times New Roman", serif;
+  --sans: "Instrument Sans", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --space-1: 4px; --space-2: 8px; --space-3: 16px; --space-4: 24px; --space-5: 40px; --space-6: 64px;
+  --radius-sm: 4px; --radius-md: 10px; --radius-pill: 999px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #171a17; --surface: #20241f; --ink: #ece6d9; --muted: #a6aba3;
+    --line: #343a33; --forest: #7fb79a; --forest-hover: #92c6aa; --on-forest: #121512;
+    --terracotta: #e08a63; --mustard: #d9a93c; --danger: #ef7f74; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #171a17; --surface: #20241f; --ink: #ece6d9; --muted: #a6aba3;
+  --line: #343a33; --forest: #7fb79a; --forest-hover: #92c6aa; --on-forest: #121512;
+  --terracotta: #e08a63; --mustard: #d9a93c; --danger: #ef7f74; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--paper); color: var(--ink);
+  font: 400 17px/27px var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+.wrap {
+  max-width: 1200px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+a { color: var(--forest); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* Header */
+.site { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3);
+  padding-block: var(--space-4); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.wordmark { font: 600 22px/28px var(--serif); color: var(--ink); text-decoration: none; }
+.wordmark span { color: var(--muted); font-weight: 400; }
+.eyebrow { font: 500 12px/16px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--terracotta); margin: 0; }
+.site .eyebrow { color: var(--muted); }
+
+/* Lead */
+.lead { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-5);
+  padding-block: var(--space-6) var(--space-5); align-items: end; }
+.lead h1 { font: 600 64px/68px var(--serif); margin: var(--space-3) 0 var(--space-4); letter-spacing: -.01em; text-wrap: balance; }
+.lead h1 em { font-style: italic; font-weight: 500; background: linear-gradient(transparent 72%, var(--mustard) 72%, var(--mustard) 90%, transparent 90%); }
+.lead p { margin: 0; max-width: 38rem; color: var(--muted); }
+
+/* Signal chain */
+.chain { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-4); }
+.chain ol { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: 0; }
+.chain li { display: grid; grid-template-columns: 14px 1fr auto; gap: var(--space-3); align-items: center; padding-block: 10px; position: relative; }
+.chain li + li { border-top: 1px dashed var(--line); }
+.chain .dot { width: 10px; height: 10px; border-radius: var(--radius-pill); border: 1.5px solid var(--muted); background: transparent; }
+.chain li[data-on="true"] .dot { background: var(--forest); border-color: var(--forest); }
+.chain li[data-on="warn"] .dot { background: var(--mustard); border-color: var(--mustard); }
+.chain .name { font-weight: 600; font-size: 15px; }
+.chain .state { font: 400 13px/18px var(--mono); color: var(--muted); text-align: right; }
+
+/* Steps */
+.step { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--space-5);
+  padding-block: var(--space-5); border-top: 1px solid var(--line); }
+.step h2 { font: 500 30px/36px var(--serif); margin: var(--space-2) 0 var(--space-3); text-wrap: balance; }
+.step .aside p { margin: 0 0 var(--space-3); color: var(--muted); font-size: 15px; line-height: 23px; max-width: 30rem; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-4); min-width: 0; }
+.stack { display: grid; gap: var(--space-3); }
+.row { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
+
+/* Buttons */
+.btn { font: 600 14px/21px var(--sans); border-radius: var(--radius-md); padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--forest); background: var(--forest); color: var(--on-forest); cursor: pointer;
+  display: inline-flex; align-items: center; gap: var(--space-2); text-decoration: none; }
+.btn:hover { background: var(--forest-hover); border-color: var(--forest-hover); }
+.btn.secondary { background: transparent; color: var(--ink); border-color: var(--ink); }
+.btn.secondary:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.btn.danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+.btn.small { padding: 4px 12px; font-size: 13px; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Form */
+label.f { display: grid; gap: var(--space-1); font-size: 14px; font-weight: 500; min-width: 0; }
+label.f span { font: 500 12px/16px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+input[type=text], select {
+  font: 400 15px/22px var(--sans); color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px 10px; width: 100%; min-width: 0;
+}
+input[type=text]:focus, select:focus { border-color: var(--forest); outline: none; }
+.fields { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: var(--space-3); }
+
+/* Progress + log */
+.progress { height: 8px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-pill); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: var(--forest); transition: width .2s; }
+.log { font: 400 12px/18px var(--mono); color: var(--muted); background: var(--paper); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); max-height: 140px; overflow: auto; white-space: pre-wrap; margin: 0; }
+.note { font-size: 14px; line-height: 21px; color: var(--muted); margin: 0; }
+.msg { font-size: 14px; line-height: 21px; margin: 0; display: flex; gap: var(--space-2); align-items: flex-start; }
+.msg.err { color: var(--danger); }
+.msg.ok { color: var(--forest); }
+.msg svg { flex: none; width: 18px; height: 18px; margin-top: 2px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Pairing list */
+.pair { margin: 0; padding: 0; list-style: none; counter-reset: p; display: grid; gap: var(--space-3); }
+.pair li { counter-increment: p; display: block; position: relative; padding-left: 44px; min-height: 28px; font-size: 16px; line-height: 25px; }
+.pair li::before { position: absolute; left: 0; top: -1px; content: counter(p); font: 500 13px/26px var(--mono); color: var(--terracotta); border: 1px solid var(--line); border-radius: var(--radius-pill); text-align: center; width: 28px; height: 28px; }
+code, .mono { font-family: var(--mono); font-size: .88em; }
+code { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 1px 6px; }
+
+/* Recorder */
+.deck { display: grid; gap: var(--space-4); }
+.deck-top { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; }
+.clock { font: 500 56px/60px var(--serif); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.clock-sub { font: 400 13px/18px var(--mono); color: var(--muted); letter-spacing: .04em; margin: var(--space-1) 0 0; }
+.rec-state { display: inline-flex; align-items: center; gap: var(--space-2); font: 500 12px/16px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+  border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 4px 12px; }
+.rec-state i { width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--muted); }
+.rec-state[data-s="live"] { color: var(--forest); border-color: var(--forest); }
+.rec-state[data-s="live"] i { background: var(--forest); }
+.rec-state[data-s="rec"] { color: var(--terracotta); border-color: var(--terracotta); }
+.rec-state[data-s="rec"] i { background: var(--terracotta); animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .rec-state i { animation: none !important; } }
+
+.wave { width: 100%; height: 120px; display: block; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.meter { display: grid; gap: 6px; }
+.meter .bar { position: relative; height: 12px; border-radius: var(--radius-sm); background: var(--paper); border: 1px solid var(--line); overflow: hidden; }
+.meter .bar i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--forest); }
+.meter .bar b { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); left: 0; }
+.meter .bar.clip i { background: var(--terracotta); }
+.meter .scale { position: relative; height: 16px; font: 400 11px/16px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.meter .scale span { position: absolute; transform: translateX(-50%); }
+.meter .scale span:first-child { transform: none; }
+.meter .scale span:last-child { transform: translateX(-100%); }
+.meter-head { display: flex; justify-content: space-between; font: 400 12px/16px var(--mono); color: var(--muted); }
+.meter-head b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); border-top: 1px solid var(--line); padding-top: var(--space-3); }
+.stats div { display: grid; gap: 2px; min-width: 0; }
+.stats dt { font: 500 11px/16px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.stats dd { margin: 0; font: 500 15px/22px var(--mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* Library */
+.library { display: grid; gap: 0; }
+.track { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding-block: var(--space-3); border-top: 1px solid var(--line); }
+.track:first-child { border-top: 0; padding-top: 0; }
+.label-disc { width: 52px; height: 52px; border-radius: var(--radius-pill); background: var(--ink); display: grid; place-items: center; position: relative; }
+.label-disc::after { content: ""; position: absolute; inset: 6px; border-radius: var(--radius-pill); border: 1px solid color-mix(in srgb, var(--paper) 18%, transparent); }
+.label-disc span { width: 22px; height: 22px; border-radius: var(--radius-pill); background: var(--mustard); color: #1f2a24; font: 600 11px/22px var(--mono); text-align: center; position: relative; z-index: 1; }
+.track h3 { font: 600 17px/24px var(--sans); margin: 0; overflow-wrap: anywhere; }
+.track .meta { font: 400 12px/18px var(--mono); color: var(--muted); margin: 2px 0 0; }
+.track audio { width: 100%; margin-top: var(--space-2); height: 36px; }
+.track .acts { display: flex; gap: var(--space-2); flex-wrap: wrap; justify-content: flex-end; }
+.empty { text-align: left; padding-block: var(--space-4); display: grid; gap: var(--space-2); }
+.empty h3 { font: 500 21px/28px var(--serif); margin: 0; }
+.confirm { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--danger); }
+
+.banner { background: var(--surface); border: 1px solid var(--danger); color: var(--ink); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); margin-top: var(--space-4); display: flex; gap: var(--space-3); }
+.banner svg { flex: none; width: 20px; height: 20px; stroke: var(--danger); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; margin-top: 3px; }
+
+footer { border-top: 1px solid var(--line); padding-block: var(--space-4) var(--space-6); color: var(--muted); font-size: 14px; line-height: 21px; }
+footer p { margin: 0; max-width: 46rem; }
+
+@media (max-width: 900px) {
+  .lead, .step { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+  .lead h1 { font-size: 44px; line-height: 50px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .fields { grid-template-columns: minmax(0, 1fr); }
+  .lead h1 { font-size: 38px; line-height: 44px; }
+  .clock { font-size: 44px; line-height: 50px; }
+  .track { grid-template-columns: 40px minmax(0, 1fr); }
+  .label-disc { width: 40px; height: 40px; }
+  .label-disc span { width: 18px; height: 18px; line-height: 18px; font-size: 10px; }
+  .track .acts { grid-column: 1 / -1; justify-content: flex-start; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="wordmark" href="#">Fieldnote <span>Turntable Recorder</span></a>
+    <p class="eyebrow">ESP32 · Bluetooth A2DP · USB</p>
+  </header>
+
+  <div id="unsupported" class="banner" hidden>
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>
+    <div><strong>This browser can't talk to USB devices.</strong> Open this page in Chrome or Edge on a Mac or PC. Safari and Firefox don't support Web Serial, which flashing and recording both need.</div>
+  </div>
+
+  <section class="lead">
+    <div>
+      <p class="eyebrow">Vinyl to WAV</p>
+      <h1>Record your turntable <em>straight</em> into this browser.</h1>
+      <p>Your Bluetooth record player streams to an ESP32. The ESP32 passes the audio down its USB cable to this page, which saves each side as a lossless WAV file in your browser.</p>
+    </div>
+    <aside class="chain" aria-label="Signal chain">
+      <p class="eyebrow">Signal chain</p>
+      <ol>
+        <li id="c-tt" data-on="false"><i class="dot"></i><span class="name">Turntable</span><span class="state" id="c-tt-s">not paired</span></li>
+        <li id="c-esp" data-on="false"><i class="dot"></i><span class="name">ESP32</span><span class="state" id="c-esp-s">not connected</span></li>
+        <li id="c-usb" data-on="false"><i class="dot"></i><span class="name">USB cable</span><span class="state" id="c-usb-s">idle</span></li>
+        <li id="c-br" data-on="false"><i class="dot"></i><span class="name">This browser</span><span class="state" id="c-br-s">0 recordings</span></li>
+      </ol>
+    </aside>
+  </section>
+
+  <!-- Step 1: Flash -->
+  <section class="step" id="flash">
+    <div class="aside">
+      <p class="eyebrow">Step 1 · Once per board</p>
+      <h2>Flash the ESP32</h2>
+      <p>Plug the ESP32 into this computer with a data USB cable, then flash it. This takes about 30 seconds and only needs doing once.</p>
+      <p>Use an original ESP32 board (ESP32-WROOM-32 or ESP32-DevKitC). The ESP32-C3, S2 and S3 only have Bluetooth Low Energy and can't receive turntable audio.</p>
+    </div>
+    <div class="card stack">
+      <div class="row">
+        <button class="btn" id="flashBtn" type="button">
+          <svg viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></svg>
+          Flash firmware
+        </button>
+        <span class="note mono" id="fwInfo">Fieldnote Recorder firmware 1.0.0</span>
+      </div>
+      <div class="progress" aria-label="Flash progress"><i id="flashBar"></i></div>
+      <p class="msg" id="flashMsg"></p>
+      <pre class="log" id="flashLog">Waiting to start. Chrome will ask which serial port to use; pick the one named CP210x, CH340, CH9102 or "USB Serial".</pre>
+      <p class="note">If flashing stalls at "Connecting", hold the board's <strong>BOOT</strong> button while you click Flash, and let go once the progress bar moves.</p>
+    </div>
+  </section>
+
+  <!-- Step 2: Pair -->
+  <section class="step" id="pair">
+    <div class="aside">
+      <p class="eyebrow">Step 2 · Once per turntable</p>
+      <h2>Pair your turntable</h2>
+      <p>After flashing, the ESP32 acts like a Bluetooth speaker. It reconnects to the same turntable automatically each time it powers up.</p>
+    </div>
+    <div class="card">
+      <ol class="pair">
+        <li>Keep the ESP32 plugged into this computer by USB. It's powered from the cable.</li>
+        <li>Put the turntable into Bluetooth pairing mode. Most have a Bluetooth button you hold for three seconds.</li>
+        <li>The turntable should find <code>Fieldnote Recorder</code> and connect. If yours pairs to the nearest speaker on its own, turn off your other Bluetooth speakers first.</li>
+        <li>Connect below. The signal chain at the top turns green when the turntable is connected.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Step 3: Record -->
+  <section class="step" id="record">
+    <div class="aside">
+      <p class="eyebrow">Step 3 · Every side</p>
+      <h2>Record a side</h2>
+      <p>Connect, drop the needle and watch the meter. Click record a moment before the first track, and stop after the run-out groove.</p>
+      <p>Keep the turntable's own volume at maximum; the ESP32 records the stream before any volume change, so peaks stay clean either way.</p>
+    </div>
+    <div class="card deck">
+      <div class="deck-top">
+        <div>
+          <div class="clock" id="clock">00:00</div>
+          <p class="clock-sub" id="clockSub">0 MB · not recording</p>
+        </div>
+        <span class="rec-state" id="recState" data-s="off"><i></i><span id="recStateText">Offline</span></span>
+      </div>
+
+      <canvas class="wave" id="wave" height="120" aria-label="Live waveform"></canvas>
+
+      <div class="meter" aria-label="Level meter">
+        <div class="meter-head"><span>Peak level</span><b id="peakText">−∞ dBFS</b></div>
+        <div class="bar" id="meterBar"><i id="meterFill"></i><b id="meterHold"></b></div>
+        <div class="scale" id="meterScale"></div>
+      </div>
+
+      <div class="fields">
+        <label class="f"><span>Album</span><input type="text" id="album" placeholder="Kind of Blue" autocomplete="off"></label>
+        <label class="f"><span>Artist</span><input type="text" id="artist" placeholder="Miles Davis" autocomplete="off"></label>
+        <label class="f"><span>Side</span>
+          <select id="side"><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option></select>
+        </label>
+      </div>
+      <label class="f"><span>Quality</span>
+        <select id="mode">
+          <option value="m" selected>Mono · 44.1 kHz · 16-bit (works on most boards)</option>
+          <option value="s">Stereo · 44.1 kHz · 16-bit (needs a CH340, CH9102 or CP2102N USB chip)</option>
+          <option value="h">Mono · 22 kHz · 16-bit (for boards that drop audio)</option>
+        </select>
+      </label>
+
+      <div class="row">
+        <button class="btn secondary" id="connectBtn" type="button">
+          <svg viewBox="0 0 24 24"><path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5"/></svg>
+          Connect ESP32
+        </button>
+        <button class="btn" id="recBtn" type="button" disabled>
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></svg>
+          <span id="recBtnText">Start recording</span>
+        </button>
+      </div>
+      <p class="msg" id="recMsg"></p>
+
+      <dl class="stats">
+        <div><dt>Bluetooth</dt><dd id="sBt">—</dd></div>
+        <div><dt>Format</dt><dd id="sFmt">—</dd></div>
+        <div><dt>USB rate</dt><dd id="sRate">—</dd></div>
+        <div><dt>Dropped</dt><dd id="sDrop">—</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- Library -->
+  <section class="step" id="library">
+    <div class="aside">
+      <p class="eyebrow">Saved in this browser</p>
+      <h2>Your recordings</h2>
+      <p>Recordings stay in this browser's storage on this computer until you delete them. Download a WAV to keep a copy anywhere else.</p>
+      <p class="note mono" id="storage">Checking storage…</p>
+    </div>
+    <div class="card">
+      <div class="library" id="list"></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Fieldnote Turntable Recorder. Firmware streams raw 16-bit PCM over USB at 2,000,000 baud; this page assembles it into WAV files and keeps them in IndexedDB. Nothing leaves your computer.</p>
+  </footer>
+</div>
+
+<script type="text/plain" id="esptool-src">/*ESPTOOL*/</script>
+<script type="text/plain" id="firmware-b64">/*FIRMWARE_B64*/</script>
+
+<script>
+(() => {
+"use strict";
+const $ = (id) => document.getElementById(id);
+const hasSerial = "serial" in navigator;
+if (!hasSerial) $("unsupported").hidden = false;
+
+const FLASH_ADDR = 0x1000;
+const SERIAL_BAUD = 2000000;
+const MAGIC0 = 0xF5, MAGIC1 = 0xA1;
+
+/* ---------- Shared port ---------- */
+let port = null;
+async function pickPort() {
+  if (port) return port;
+  const known = await navigator.serial.getPorts();
+  if (known.length === 1) { port = known[0]; return port; }
+  port = await navigator.serial.requestPort();
+  return port;
+}
+if (hasSerial) {
+  navigator.serial.addEventListener("disconnect", (e) => {
+    if (e.target === port) { port = null; onLinkLost("The ESP32 was unplugged."); }
+  });
+}
+
+function setChain(id, on, text) { $(id).dataset.on = String(on); $(id + "-s").textContent = text; }
+
+/* ---------- Step 1: flashing ---------- */
+const flashLog = $("flashLog");
+function log(line) { flashLog.textContent += "\n" + line; flashLog.scrollTop = flashLog.scrollHeight; }
+function setMsg(el, kind, text) {
+  const icon = kind === "err"
+    ? '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>'
+    : kind === "ok" ? '<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>' : "";
+  el.className = "msg " + (kind || "");
+  el.innerHTML = text ? icon + "<span></span>" : "";
+  if (text) el.querySelector("span").textContent = text;
+}
+
+const fwB64 = $("firmware-b64").textContent.trim();
+$("fwInfo").textContent = "Fieldnote Recorder firmware 1.0.0 · " + (fwB64.length * 0.75 / 1048576).toFixed(2) + " MB";
+
+let esptoolMod = null;
+async function loadEsptool() {
+  if (esptoolMod) return esptoolMod;
+  const src = $("esptool-src").textContent;
+  const url = URL.createObjectURL(new Blob([src], { type: "text/javascript" }));
+  esptoolMod = await import(url);
+  return esptoolMod;
+}
+
+$("flashBtn").addEventListener("click", async () => {
+  if (!hasSerial) return;
+  const btn = $("flashBtn");
+  btn.disabled = true;
+  setMsg($("flashMsg"), "", "");
+  $("flashBar").style.width = "0%";
+  flashLog.textContent = "Starting…";
+  let transport = null;
+  try {
+    await disconnectRecorder();
+    const { ESPLoader, Transport } = await loadEsptool();
+    const p = await pickPort();
+    transport = new Transport(p, false);
+    const terminal = {
+      clean() {},
+      writeLine(d) { log(String(d)); },
+      write(d) { const t = String(d); if (t.trim()) log(t); },
+    };
+    const loader = new ESPLoader({ transport, baudrate: 460800, romBaudrate: 115200, terminal });
+    setChain("c-usb", "warn", "flashing");
+    const chip = await loader.main();
+    log("Chip: " + chip);
+    if (!/^ESP32(?!-)/.test(String(chip)) || /ESP32-(C|S|H|P)/.test(String(chip))) {
+      throw new Error("This board is an " + chip + ". It has no Bluetooth Classic, so it can't receive audio from a turntable. Use an original ESP32 (WROOM-32) board.");
+    }
+    const data = atob(fwB64);
+    await loader.writeFlash({
+      fileArray: [{ data, address: FLASH_ADDR }],
+      flashSize: "keep", flashMode: "keep", flashFreq: "keep",
+      eraseAll: false, compress: true,
+      reportProgress: (_i, written, total) => { $("flashBar").style.width = (written / total * 100).toFixed(1) + "%"; },
+    });
+    $("flashBar").style.width = "100%";
+    log("Restarting the board…");
+    await loader.after("hard_reset");
+    await transport.disconnect();
+    transport = null;
+    setChain("c-esp", true, "flashed");
+    setChain("c-usb", false, "idle");
+    setMsg($("flashMsg"), "ok", "Flashed. Pair your turntable with Fieldnote Recorder, then connect in step 3.");
+  } catch (err) {
+    console.error(err);
+    if (err && err.name === "NotFoundError") {
+      setMsg($("flashMsg"), "err", "No port chosen. Click Flash firmware again and pick the ESP32's serial port.");
+    } else {
+      setMsg($("flashMsg"), "err", (err && err.message) || String(err));
+      log("Error: " + ((err && err.message) || err));
+    }
+    setChain("c-usb", false, "idle");
+    if (transport) { try { await transport.disconnect(); } catch (_) {} }
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+/* ---------- Step 3: live link + recording ---------- */
+const state = {
+  reader: null, writer: null, open: false,
+  status: null, mode: "m",
+  recording: false, chunks: [], samples: 0, bytes: 0,
+  lostPackets: 0, lastSeq: -1, droppedAtStart: 0,
+  rxBytes: 0, rxWindowStart: performance.now(), rxRate: 0,
+  peak: 0, hold: 0, holdAt: 0,
+};
+
+function fmtTime(sec) {
+  sec = Math.floor(sec);
+  const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60;
+  const mm = String(m).padStart(2, "0"), ss = String(s).padStart(2, "0");
+  return h ? h + ":" + mm + ":" + ss : mm + ":" + ss;
+}
+function fmtBytes(b) { return b > 1e9 ? (b / 1e9).toFixed(2) + " GB" : (b / 1e6).toFixed(1) + " MB"; }
+function channels() { return state.mode === "s" ? 2 : 1; }
+function rate() {
+  const base = (state.status && state.status.rate) || 44100;
+  return state.mode === "h" ? Math.round(base / 2) : base;
+}
+function fmtLabel() { return (rate() / 1000).toFixed(rate() % 1000 ? 1 : 0) + " kHz " + (channels() === 2 ? "stereo" : "mono"); }
+
+async function sendCmd(c) {
+  if (!state.writer) return;
+  await state.writer.write(new TextEncoder().encode(c));
+}
+
+$("connectBtn").addEventListener("click", async () => {
+  if (!hasSerial) return;
+  if (state.open) { await disconnectRecorder(); return; }
+  try {
+    const p = await pickPort();
+    await p.open({ baudRate: SERIAL_BAUD, bufferSize: 1 << 20 });
+    try { await p.setSignals({ dataTerminalReady: false, requestToSend: false }); } catch (_) {}
+    state.open = true;
+    state.writer = p.writable.getWriter();
+    $("connectBtn").lastChild.textContent = " Disconnect";
+    setChain("c-esp", "warn", "waiting for reply");
+    setChain("c-usb", "warn", "listening");
+    setRecState("live", "Connecting");
+    setMsg($("recMsg"), "", "");
+    readLoop(p);
+    state.mode = $("mode").value;
+    await sendCmd("i");
+    await sendCmd(state.mode);
+    statusWatchdog();
+  } catch (err) {
+    console.error(err);
+    state.open = false;
+    if (err && err.name === "NotFoundError") setMsg($("recMsg"), "err", "No port chosen. Click Connect ESP32 and pick its serial port.");
+    else if (err && err.name === "InvalidStateError") setMsg($("recMsg"), "err", "That port is already open in another tab or app (for example a serial monitor). Close it and try again.");
+    else setMsg($("recMsg"), "err", (err && err.message) || String(err));
+  }
+});
+
+$("mode").addEventListener("change", async () => {
+  if (state.recording) { $("mode").value = state.mode; return; }
+  state.mode = $("mode").value;
+  if (state.open) await sendCmd(state.mode);
+  updateStats();
+});
+
+let watchdogTimer = null;
+function statusWatchdog() {
+  clearTimeout(watchdogTimer);
+  watchdogTimer = setTimeout(() => {
+    if (state.open && !state.status) {
+      setMsg($("recMsg"), "err", "The board isn't answering. Flash it in step 1 first, or press its EN (reset) button once. If it has a CP2102 USB chip, it may not support 2,000,000 baud.");
+      setChain("c-esp", false, "no reply");
+    }
+  }, 3500);
+}
+
+async function disconnectRecorder() {
+  if (!state.open) return;
+  if (state.recording) await stopRecording();
+  try { await sendCmd("x"); } catch (_) {}
+  state.open = false;
+  try { if (state.reader) await state.reader.cancel(); } catch (_) {}
+  try { if (state.writer) state.writer.releaseLock(); } catch (_) {}
+  try { if (port) await port.close(); } catch (_) {}
+  state.reader = null; state.writer = null; state.status = null;
+  $("connectBtn").lastChild.textContent = " Connect ESP32";
+  $("recBtn").disabled = true;
+  setRecState("off", "Offline");
+  setChain("c-tt", false, "not paired");
+  setChain("c-esp", false, "not connected");
+  setChain("c-usb", false, "idle");
+  updateStats();
+}
+
+function onLinkLost(why) {
+  const wasRecording = state.recording;
+  state.open = false;
+  if (wasRecording) stopRecording();
+  state.reader = null; state.writer = null; state.status = null;
+  $("connectBtn").lastChild.textContent = " Connect ESP32";
+  $("recBtn").disabled = true;
+  setRecState("off", "Offline");
+  setChain("c-tt", false, "not paired"); setChain("c-esp", false, "not connected"); setChain("c-usb", false, "idle");
+  setMsg($("recMsg"), "err", why + (wasRecording ? " The recording so far was saved." : ""));
+  updateStats();
+}
+
+/* Packet parser */
+let rx = new Uint8Array(1 << 16), rxLen = 0;
+function pushBytes(chunk) {
+  if (rxLen + chunk.length > rx.length) {
+    const n = new Uint8Array(Math.max(rx.length * 2, rxLen + chunk.length));
+    n.set(rx.subarray(0, rxLen)); rx = n;
+  }
+  rx.set(chunk, rxLen); rxLen += chunk.length;
+  let i = 0;
+  while (rxLen - i >= 5) {
+    if (rx[i] !== MAGIC0 || rx[i + 1] !== MAGIC1) { i++; continue; }
+    const type = rx[i + 2], len = rx[i + 3] | (rx[i + 4] << 8);
+    if (len > 8192 || (type !== 0x41 && type !== 0x53)) { i++; continue; }
+    if (rxLen - i < 5 + len) break;
+    const payload = rx.subarray(i + 5, i + 5 + len);
+    if (type === 0x41) onAudio(payload); else onStatus(payload);
+    i += 5 + len;
+  }
+  if (i > 0) { rx.copyWithin(0, i, rxLen); rxLen -= i; }
+}
+
+async function readLoop(p) {
+  while (state.open && p.readable) {
+    const reader = p.readable.getReader();
+    state.reader = reader;
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) { state.rxBytes += value.length; pushBytes(value); }
+      }
+    } catch (err) {
+      console.warn("serial read", err);
+      if (err && err.name === "NetworkError") { reader.releaseLock(); onLinkLost("The USB connection dropped."); return; }
+    } finally {
+      try { reader.releaseLock(); } catch (_) {}
+    }
+  }
+}
+
+function onStatus(payload) {
+  let s;
+  try { s = JSON.parse(new TextDecoder().decode(payload)); } catch (_) { return; }
+  const first = !state.status;
+  state.status = s;
+  if (first) { setMsg($("recMsg"), "", ""); }
+  setChain("c-esp", true, "firmware " + s.fw);
+  if (s.bt === "connected") {
+    setChain("c-tt", s.playing ? true : "warn", s.playing ? "playing" : "connected, silent");
+  } else {
+    setChain("c-tt", false, "waiting to pair");
+  }
+  if (!state.recording) setRecState(s.bt === "connected" ? "live" : "off", s.bt === "connected" ? (s.playing ? "Live" : "Connected") : "No turntable");
+  $("recBtn").disabled = !(s.bt === "connected") && !state.recording;
+  if (s.streaming === false && state.open) sendCmd(state.mode); // board restarted: resume stream
+  updateStats();
+}
+
+function onAudio(payload) {
+  const seq = payload[0] | (payload[1] << 8);
+  if (state.lastSeq >= 0) {
+    const gap = (seq - state.lastSeq - 1 + 65536) % 65536;
+    if (gap > 0 && gap < 2000 && state.recording) {
+      state.lostPackets += gap;
+      const fill = new Int16Array(gap * 512); // keep timing: 1024 bytes of silence per lost packet
+      state.chunks.push(fill); state.samples += fill.length; state.bytes += fill.byteLength;
+    }
+  }
+  state.lastSeq = seq;
+  const n = (payload.length - 2) >> 1;
+  const pcm = new Int16Array(n);
+  new Uint8Array(pcm.buffer).set(payload.subarray(2, 2 + n * 2));
+  let pk = 0;
+  for (let k = 0; k < n; k++) { const v = Math.abs(pcm[k]); if (v > pk) pk = v; }
+  pushWave(pk / 32768);
+  if (pk / 32768 > state.peak) state.peak = pk / 32768;
+  if (state.recording) { state.chunks.push(pcm); state.samples += n; state.bytes += pcm.byteLength; }
+}
+
+/* Recording */
+$("recBtn").addEventListener("click", async () => {
+  if (state.recording) await stopRecording(); else await startRecording();
+});
+
+async function startRecording() {
+  state.mode = $("mode").value;
+  await sendCmd(state.mode); // restart stream cleanly in the chosen mode
+  state.lastSeq = -1;
+  state.chunks = []; state.samples = 0; state.bytes = 0; state.lostPackets = 0;
+  state.droppedAtStart = 0;
+  state.recording = true;
+  state.startedAt = Date.now();
+  $("mode").disabled = true;
+  $("recBtnText").textContent = "Stop and save";
+  setRecState("rec", "Recording");
+  setChain("c-br", "warn", "recording");
+  setMsg($("recMsg"), "", "");
+}
+
+async function stopRecording() {
+  if (!state.recording) return;
+  state.recording = false;
+  $("mode").disabled = false;
+  $("recBtnText").textContent = "Start recording";
+  setRecState(state.open ? "live" : "off", state.open ? "Live" : "Offline");
+  const ch = channels(), sr = rate();
+  const chunks = state.chunks; state.chunks = [];
+  const samples = state.samples;
+  if (samples < sr * ch) { setMsg($("recMsg"), "err", "That recording was under a second long, so it wasn't saved."); refreshList(); return; }
+  const blob = makeWav(chunks, sr, ch);
+  const album = $("album").value.trim() || "Untitled record";
+  const artist = $("artist").value.trim();
+  const side = $("side").value;
+  const rec = {
+    album, artist, side, created: Date.now(), duration: samples / (sr * ch),
+    rate: sr, channels: ch, size: blob.size, blob,
+    lost: state.lostPackets, dropped: (state.status && state.status.dropped) || 0,
+  };
+  try {
+    await dbPut(rec);
+    const extra = (rec.lost || rec.dropped) ? " Some audio was dropped on the way; if you hear gaps, record again with a lower quality setting." : "";
+    setMsg($("recMsg"), rec.lost || rec.dropped ? "err" : "ok", "Saved " + album + " · Side " + side + " (" + fmtTime(rec.duration) + ")." + extra);
+    const next = String.fromCharCode(side.charCodeAt(0) + 1);
+    if ([...$("side").options].some(o => o.value === next)) $("side").value = next;
+  } catch (err) {
+    console.error(err);
+    setMsg($("recMsg"), "err", "The browser couldn't store this recording (" + (err.message || err) + "). Free some disk space or delete old recordings.");
+  }
+  refreshList();
+}
+
+function makeWav(chunks, sampleRate, ch) {
+  let dataBytes = 0; for (const c of chunks) dataBytes += c.byteLength;
+  const h = new DataView(new ArrayBuffer(44));
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) h.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, "RIFF"); h.setUint32(4, 36 + dataBytes, true); w(8, "WAVE");
+  w(12, "fmt "); h.setUint32(16, 16, true); h.setUint16(20, 1, true); h.setUint16(22, ch, true);
+  h.setUint32(24, sampleRate, true); h.setUint32(28, sampleRate * ch * 2, true);
+  h.setUint16(32, ch * 2, true); h.setUint16(34, 16, true);
+  w(36, "data"); h.setUint32(40, dataBytes, true);
+  return new Blob([h.buffer, ...chunks], { type: "audio/wav" });
+}
+
+/* UI: status, clock, meter, waveform */
+function setRecState(s, text) { $("recState").dataset.s = s; $("recStateText").textContent = text; }
+
+function updateStats() {
+  const s = state.status;
+  $("sBt").textContent = s ? (s.bt === "connected" ? (s.peer || "connected") : "waiting") : "—";
+  $("sFmt").textContent = fmtLabel();
+  $("sRate").textContent = state.open ? (state.rxRate / 1000).toFixed(0) + " kB/s" : "—";
+  const drop = state.recording ? state.lostPackets + (s ? Math.round(s.dropped / 1024) : 0) : 0;
+  $("sDrop").textContent = state.open ? (drop ? drop + " blocks" : "none") : "—";
+}
+
+setInterval(() => {
+  const now = performance.now();
+  const dt = (now - state.rxWindowStart) / 1000;
+  if (dt >= 1) { state.rxRate = state.rxBytes / dt; state.rxBytes = 0; state.rxWindowStart = now; updateStats(); }
+  if (state.open) setChain("c-usb", state.rxRate > 1000 ? true : "warn", state.rxRate > 1000 ? (state.rxRate / 1000).toFixed(0) + " kB/s" : "listening");
+  if (state.recording) {
+    const sec = state.samples / (rate() * channels());
+    $("clock").textContent = fmtTime(sec);
+    $("clockSub").textContent = fmtBytes(state.bytes + 44) + " · " + fmtLabel() + " · recording";
+  }
+}, 250);
+
+const scale = [-60, -40, -30, -20, -12, -6, -3, 0];
+const dbToPct = (db) => Math.max(0, Math.min(100, (db + 60) / 60 * 100));
+$("meterScale").innerHTML = scale.map(d => '<span style="left:' + dbToPct(d) + '%">' + (d === 0 ? "0" : "−" + Math.abs(d)) + "</span>").join("");
+
+const wave = $("wave"), wctx = wave.getContext("2d");
+const waveCols = []; const MAXCOLS = 600;
+function pushWave(v) { waveCols.push(v); if (waveCols.length > MAXCOLS) waveCols.shift(); }
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function draw() {
+  const dpr = window.devicePixelRatio || 1;
+  const W = wave.clientWidth, H = wave.clientHeight;
+  if (wave.width !== Math.round(W * dpr)) { wave.width = Math.round(W * dpr); wave.height = Math.round(H * dpr); }
+  wctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  wctx.clearRect(0, 0, W, H);
+  const lineC = cssVar("--line"), fg = state.recording ? cssVar("--terracotta") : cssVar("--forest");
+  wctx.strokeStyle = lineC; wctx.lineWidth = 1;
+  wctx.beginPath(); wctx.moveTo(0, H / 2 + .5); wctx.lineTo(W, H / 2 + .5); wctx.stroke();
+  const cols = Math.min(waveCols.length, Math.floor(W / 2));
+  wctx.fillStyle = fg;
+  for (let i = 0; i < cols; i++) {
+    const v = waveCols[waveCols.length - cols + i];
+    const h = Math.max(1, v * (H - 8));
+    wctx.fillRect(W - (cols - i) * 2, (H - h) / 2, 1.4, h);
+  }
+  if (!state.open) {
+    wctx.fillStyle = cssVar("--muted"); wctx.font = "13px " + cssVar("--mono");
+    wctx.fillText("Connect the ESP32 to see the signal", 14, 24);
+  }
+  // meter with peak decay and 1.5 s hold
+  const pk = state.peak; state.peak *= 0.86;
+  const db = pk > 0 ? 20 * Math.log10(pk) : -Infinity;
+  const now = performance.now();
+  if (pk >= state.hold || now - state.holdAt > 1500) { state.hold = pk; state.holdAt = now; }
+  const holdDb = state.hold > 0 ? 20 * Math.log10(state.hold) : -Infinity;
+  $("meterFill").style.width = (isFinite(db) ? dbToPct(db) : 0) + "%";
+  $("meterHold").style.left = "calc(" + (isFinite(holdDb) ? dbToPct(holdDb) : 0) + "% - 2px)";
+  $("meterBar").classList.toggle("clip", holdDb > -1);
+  $("peakText").textContent = isFinite(holdDb) && holdDb > -90 ? holdDb.toFixed(1).replace("-", "−") + " dBFS" : "−∞ dBFS";
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+
+/* ---------- Library (IndexedDB) ---------- */
+let dbp = null;
+function db() {
+  if (dbp) return dbp;
+  dbp = new Promise((res, rej) => {
+    const r = indexedDB.open("fieldnote-turntable", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("recordings", { keyPath: "id", autoIncrement: true });
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  return dbp;
+}
+async function tx(mode, fn) {
+  const d = await db();
+  return new Promise((res, rej) => {
+    const t = d.transaction("recordings", mode);
+    const out = fn(t.objectStore("recordings"));
+    t.oncomplete = () => res(out && out.result !== undefined ? out.result : undefined);
+    t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+  });
+}
+const dbPut = (rec) => tx("readwrite", s => s.add(rec));
+const dbDel = (id) => tx("readwrite", s => s.delete(id));
+const dbAll = () => tx("readonly", s => s.getAll());
+
+const urls = new Map();
+function safeName(r) {
+  return [r.artist, r.album, "Side " + r.side].filter(Boolean).join(" - ").replace(/[\\/:*?"<>|]+/g, "").slice(0, 120) + ".wav";
+}
+async function refreshList() {
+  let items = [];
+  try { items = await dbAll(); } catch (err) { $("list").innerHTML = '<p class="msg err">Browser storage is unavailable here (private window?). Recordings can\'t be saved.</p>'; return; }
+  items.sort((a, b) => b.created - a.created);
+  setChain("c-br", state.recording ? "warn" : items.length > 0, state.recording ? "recording" : items.length + (items.length === 1 ? " recording" : " recordings"));
+  const list = $("list");
+  for (const u of urls.values()) URL.revokeObjectURL(u);
+  urls.clear();
+  if (!items.length) {
+    list.innerHTML = '<div class="empty"><p class="eyebrow">Nothing saved yet</p><h3>Your first side will appear here.</h3><p class="note">Each recording is listed with its album, side, length and format, with a player, a WAV download and a delete button.</p></div>';
+  } else {
+    list.innerHTML = "";
+    for (const r of items) {
+      const url = URL.createObjectURL(r.blob); urls.set(r.id, url);
+      const el = document.createElement("div");
+      el.className = "track";
+      const d = new Date(r.created);
+      const meta = [r.artist, fmtTime(r.duration), (r.rate / 1000).toFixed(r.rate % 1000 ? 1 : 0) + " kHz " + (r.channels === 2 ? "stereo" : "mono"), fmtBytes(r.size),
+        d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })].filter(Boolean).join(" · ");
+      el.innerHTML = '<div class="label-disc" aria-hidden="true"><span></span></div>' +
+        '<div style="min-width:0"><h3></h3><p class="meta"></p><audio controls preload="none"></audio></div>' +
+        '<div class="acts"><a class="btn small secondary" download>Download WAV</a><button class="btn small danger" type="button">Delete</button></div>';
+      el.querySelector(".label-disc span").textContent = r.side;
+      el.querySelector("h3").textContent = r.album + " · Side " + r.side;
+      el.querySelector(".meta").textContent = meta;
+      el.querySelector("audio").src = url;
+      const a = el.querySelector("a"); a.href = url; a.download = safeName(r);
+      const del = el.querySelector("button");
+      del.addEventListener("click", () => {
+        const acts = el.querySelector(".acts");
+        acts.innerHTML = '<span class="confirm">Delete for good? <button class="btn small danger" type="button">Delete</button><button class="btn small secondary" type="button">Keep</button></span>';
+        const [yes, no] = acts.querySelectorAll("button");
+        yes.addEventListener("click", async () => { await dbDel(r.id); refreshList(); });
+        no.addEventListener("click", () => refreshList());
+      });
+      list.appendChild(el);
+    }
+  }
+  try {
+    const est = await navigator.storage.estimate();
+    $("storage").textContent = fmtBytes(est.usage || 0) + " used of " + fmtBytes(est.quota || 0) + " available";
+  } catch (_) { $("storage").textContent = ""; }
+}
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (_) {}
+refreshList();
+updateStats();
+
+window.addEventListener("beforeunload", (e) => { if (state.recording) { e.preventDefault(); e.returnValue = ""; } });
+})();
+</script>
+</body>
+</html>
