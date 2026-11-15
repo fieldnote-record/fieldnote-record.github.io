@@ -172,6 +172,33 @@ canvas.wave { width: 100%; display: block; background: var(--paper); border: 1px
 .banner { background: var(--surface); border: 1px solid var(--danger); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); margin-top: var(--space-4); display: flex; gap: var(--space-3); }
 .banner svg { flex: none; width: 20px; height: 20px; stroke: var(--danger); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; margin-top: 3px; }
 
+/* Companion volume panel */
+.vol { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3); display: grid; gap: var(--space-3); }
+.vol-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.vol-head .eyebrow { color: var(--muted); }
+.pill { display: inline-flex; align-items: center; gap: 6px; font: 500 11px/16px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 3px 10px; }
+.pill i { width: 7px; height: 7px; border-radius: var(--radius-pill); background: var(--muted); }
+.pill[data-s="ok"] { color: var(--forest); border-color: var(--forest); }
+.pill[data-s="ok"] i { background: var(--forest); }
+.pill[data-s="wait"] i { background: var(--mustard); }
+.vol p { margin: 0; font-size: 14px; line-height: 21px; color: var(--muted); max-width: 40rem; }
+.cmd { display: flex; gap: var(--space-2); align-items: stretch; min-width: 0; }
+.cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; font: 400 13px/20px var(--mono); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px 10px; color: var(--ink); }
+.pair-row { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.pair-row input { width: 9.5ch; font: 500 20px/28px var(--mono); letter-spacing: .15em; text-align: center; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 6px 8px; }
+.pair-row input:focus { border-color: var(--forest); outline: none; }
+.vol-read { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+.vol-read b { font: 500 30px/36px var(--serif); font-variant-numeric: tabular-nums; min-width: 6ch; }
+.vol-read span { font: 400 12px/18px var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+input[type=range] { width: 100%; accent-color: var(--forest); margin: 0; }
+.steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-2); }
+.steps button { font: 500 13px/20px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 6px 0; cursor: pointer; }
+.steps button:hover { border-color: var(--ink); }
+.steps button[disabled] { opacity: .45; cursor: not-allowed; }
+.steps .big { font-weight: 600; }
+.linkish { background: none; border: 0; padding: 0; font: inherit; font-size: 13px; color: var(--forest); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+@media (max-width: 560px) { .steps { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
 footer { border-top: 1px solid var(--line); padding-block: var(--space-4) var(--space-6); color: var(--muted); font-size: 14px; line-height: 21px; }
 footer p { margin: 0; max-width: 46rem; }
 
@@ -240,6 +267,43 @@ footer p { margin: 0; max-width: 46rem; }
             <span>Connect input</span>
           </button>
         </div>
+      </div>
+
+      <div class="vol" id="vol">
+        <div class="vol-head">
+          <p class="eyebrow">Input volume</p>
+          <span class="pill" id="volPill" data-s="wait"><i></i><span id="volPillText">Looking for the Mac app</span></span>
+        </div>
+
+        <div id="volMissing" hidden>
+          <div class="stack" style="display:grid;gap:var(--space-3)">
+            <p>Install <strong>Fieldnote Companion</strong> to adjust your Mac's input volume from this page. Paste this into Terminal:</p>
+            <div class="cmd"><code id="installCmd">curl -fsSL https://fieldnote-record.github.io/companion/install.sh | bash</code><button class="btn small secondary" type="button" id="copyCmd">Copy</button></div>
+            <p>A record icon appears in your menu bar. Click it to see a pairing code. Works in Chrome and Edge; if Chrome asks to let this site connect to devices on your network, allow it.</p>
+          </div>
+        </div>
+
+        <div id="volPair" hidden>
+          <div style="display:grid;gap:var(--space-3)">
+            <p>Fieldnote Companion is running. Click its record icon in the menu bar and type the 6-digit code here.</p>
+            <form class="pair-row" id="pairForm">
+              <input id="pairCode" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" aria-label="Pairing code">
+              <button class="btn" type="submit">Pair</button>
+            </form>
+          </div>
+        </div>
+
+        <div id="volReady" hidden>
+          <div style="display:grid;gap:var(--space-3)">
+            <div class="vol-read"><b id="volValue">—</b><span id="volDevice"></span></div>
+            <input type="range" id="volSlider" aria-label="Input volume">
+            <div class="steps" id="volSteps"></div>
+            <p id="volNote">Small steps fine-tune; big steps get you close fast.</p>
+            <div><button class="linkish" type="button" id="unpair">Unpair this browser</button></div>
+          </div>
+        </div>
+
+        <p class="msg" id="volMsg"></p>
       </div>
 
       <div class="deck-top">
@@ -425,6 +489,7 @@ async function connectInput(deviceId) {
   setRecState("live", "Listening");
   $("recBtn").disabled = false;
   $("connectBtn").querySelector("span").textContent = "Disconnect";
+  if (typeof readVolume === "function") setTimeout(readVolume, 0);
   $("fmtText").textContent = (st.ctx.sampleRate / 1000).toFixed(st.ctx.sampleRate % 1000 ? 1 : 0) + " kHz · stereo · 16-bit WAV";
   setMsg("", "");
 }
@@ -481,6 +546,7 @@ function startRecording() {
   st.recording = true; st.startedAt = Date.now();
   st.lastGain = 1; st.lastGainDb = null;
   updateLevelText();
+  if (comp.vol) renderVolume(comp.vol);
   $("recBtn").hidden = true; $("endBtn").hidden = false;
   $("device").disabled = true; $("connectBtn").disabled = true;
   setRecState("rec", "Recording");
@@ -494,6 +560,7 @@ async function endRecording() {
   $("endBtn").hidden = true; $("recBtn").hidden = false;
   $("device").disabled = false; $("connectBtn").disabled = false;
   setRecState(st.tap ? "live" : "off", st.tap ? "Listening" : "No input");
+  if (comp.vol) renderVolume(comp.vol);
   const sr = st.ctx.sampleRate, frames = st.frames;
   const Ls = st.L, Rs = st.R; st.L = []; st.R = [];
   if (frames < sr) { setMsg("err", "That take was under a second long, so it wasn't saved."); refreshList(); return; }
@@ -783,6 +850,170 @@ async function refreshList() {
 try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (_) {}
 refreshList();
 updateLevelText();
+
+/* ---------- Fieldnote Companion (Mac menu bar app) ---------- */
+const COMPANION = "http://127.0.0.1:47823";
+const TOKEN_KEY = "fieldnote-companion-token";
+const comp = { token: null, state: "unknown", vol: null, busy: false, pending: null, sendTimer: null };
+try { comp.token = localStorage.getItem(TOKEN_KEY); } catch (_) {}
+
+async function capi(path, opts = {}) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 2500);
+  try {
+    const res = await fetch(COMPANION + path, {
+      method: opts.method || "GET",
+      headers: Object.assign({ "Content-Type": "application/json" }, comp.token ? { Authorization: "Bearer " + comp.token } : {}),
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      signal: ctrl.signal, cache: "no-store",
+    });
+    const json = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, json };
+  } finally { clearTimeout(t); }
+}
+
+function setVolMsg(kind, text) {
+  const el = $("volMsg");
+  el.className = "msg " + (kind || "");
+  el.textContent = text || "";
+}
+function showVol(state) {
+  comp.state = state;
+  $("volMissing").hidden = state !== "missing";
+  $("volPair").hidden = state !== "pair";
+  $("volReady").hidden = state !== "ready";
+  const pill = { missing: ["", "App not installed"], pair: ["wait", "Not paired"], ready: ["ok", "Paired"] }[state] || ["wait", "Looking for the Mac app"];
+  $("volPill").dataset.s = pill[0]; $("volPillText").textContent = pill[1];
+}
+function currentLabel() {
+  const t = st.stream && st.stream.getAudioTracks()[0];
+  return t ? t.label : "";
+}
+
+async function detectCompanion() {
+  try {
+    const r = await capi("/status");
+    if (!r.ok || r.json.app !== "fieldnote-companion") throw new Error("not companion");
+    if (r.json.paired) { if (comp.state !== "ready") { showVol("ready"); await readVolume(); } }
+    else { if (comp.token) { comp.token = null; try { localStorage.removeItem(TOKEN_KEY); } catch (_) {} } showVol("pair"); }
+  } catch (_) {
+    showVol("missing");
+  }
+}
+
+async function readVolume() {
+  if (comp.state !== "ready" || comp.busy || comp.pending) return;
+  try {
+    const r = await capi("/volume?device=" + encodeURIComponent(currentLabel()));
+    if (r.status === 401) { comp.token = null; showVol("pair"); return; }
+    if (!r.ok) { setVolMsg("err", r.json.error || "The Mac app couldn't read the volume."); return; }
+    renderVolume(r.json);
+  } catch (_) { showVol("missing"); }
+}
+
+const DB_STEPS = [-6, -1, -0.1, 0.1, 1, 6];
+const PCT_STEPS = [-0.1, -0.02, -0.005, 0.005, 0.02, 0.1];
+function renderVolume(v) {
+  comp.vol = v;
+  $("volDevice").textContent = v.device || "";
+  const locked = st.recording;
+  const slider = $("volSlider");
+  if (!v.adjustable) {
+    $("volValue").textContent = "Fixed";
+    $("volSteps").innerHTML = ""; slider.hidden = true;
+    $("volNote").textContent = "This input doesn't let macOS change its volume. Use the turntable's own volume or the adapter's gain knob instead.";
+    return;
+  }
+  slider.hidden = false;
+  const hasDb = typeof v.db === "number";
+  const steps = hasDb ? DB_STEPS : PCT_STEPS;
+  const labelOf = (s) => hasDb ? (s > 0 ? "+" : "−") + Math.abs(s) + " dB" : (s > 0 ? "+" : "−") + +(Math.abs(s) * 100).toFixed(1) + "%";
+  if ($("volSteps").dataset.kind !== (hasDb ? "db" : "pct")) {
+    $("volSteps").dataset.kind = hasDb ? "db" : "pct";
+    $("volSteps").innerHTML = steps.map((s, i) => '<button type="button" data-step="' + s + '" class="' + (i === 0 || i === 5 ? "big" : "") + '">' + labelOf(s) + "</button>").join("");
+  }
+  if (hasDb) {
+    $("volValue").textContent = (v.db >= 0 ? "+" : "−") + Math.abs(v.db).toFixed(1) + " dB";
+    slider.min = v.minDb; slider.max = v.maxDb; slider.step = 0.1;
+    if (document.activeElement !== slider) slider.value = v.db;
+  } else {
+    $("volValue").textContent = (v.scalar * 100).toFixed(1) + "%";
+    slider.min = 0; slider.max = 1; slider.step = 0.001;
+    if (document.activeElement !== slider) slider.value = v.scalar;
+  }
+  slider.disabled = locked;
+  $("volSteps").querySelectorAll("button").forEach(b => b.disabled = locked);
+  $("volNote").textContent = locked
+    ? "Volume is locked while recording so the whole side stays at one level. Press End to change it."
+    : "Set this before you record. Small steps fine-tune; big steps get you close fast.";
+}
+
+async function sendVolume(body) {
+  if (st.recording) return;
+  comp.busy = true;
+  try {
+    const r = await capi("/volume", { method: "POST", body: Object.assign({ device: currentLabel() }, body) });
+    if (r.status === 401) { comp.token = null; showVol("pair"); return; }
+    if (!r.ok) { setVolMsg("err", r.json.error || "The Mac app couldn't change the volume."); return; }
+    setVolMsg("", "");
+    renderVolume(r.json);
+  } catch (_) { showVol("missing"); }
+  finally { comp.busy = false; }
+}
+
+$("volSteps").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-step]");
+  if (!b || !comp.vol) return;
+  const s = parseFloat(b.dataset.step);
+  sendVolume(typeof comp.vol.db === "number" ? { deltaDb: s } : { deltaScalar: s });
+});
+$("volSlider").addEventListener("input", () => {
+  // Send at most every 80 ms while dragging; the last position always goes through.
+  const v = parseFloat($("volSlider").value);
+  comp.pending = typeof (comp.vol && comp.vol.db) === "number" ? { db: v } : { scalar: v };
+  $("volValue").textContent = comp.pending.db !== undefined ? (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + " dB" : (v * 100).toFixed(1) + "%";
+  if (comp.sendTimer) return;
+  comp.sendTimer = setTimeout(async function flush() {
+    const body = comp.pending; comp.pending = null;
+    if (body) await sendVolume(body);
+    comp.sendTimer = comp.pending ? setTimeout(flush, 80) : null;
+  }, 80);
+});
+
+$("pairForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const code = $("pairCode").value.replace(/\D/g, "");
+  if (code.length !== 6) { setVolMsg("err", "The pairing code has 6 digits. You'll find it in the Fieldnote Companion menu bar app."); return; }
+  try {
+    const r = await capi("/pair", { method: "POST", body: { code } });
+    if (!r.ok) { setVolMsg("err", r.json.error || "Pairing didn't work. Try the code again."); return; }
+    comp.token = r.json.token;
+    try { localStorage.setItem(TOKEN_KEY, comp.token); } catch (_) {}
+    $("pairCode").value = "";
+    setVolMsg("ok", "Paired. You can now change your input volume here.");
+    showVol("ready");
+    readVolume();
+  } catch (_) { showVol("missing"); setVolMsg("err", "Couldn't reach the Mac app. Check that its icon is in your menu bar."); }
+});
+$("unpair").addEventListener("click", () => {
+  comp.token = null;
+  try { localStorage.removeItem(TOKEN_KEY); } catch (_) {}
+  setVolMsg("", "");
+  showVol("pair");
+});
+$("copyCmd").addEventListener("click", async () => {
+  const text = $("installCmd").textContent;
+  try { await navigator.clipboard.writeText(text); $("copyCmd").textContent = "Copied"; }
+  catch (_) { const r = document.createRange(); r.selectNodeContents($("installCmd")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $("copyCmd").textContent = "Press ⌘C"; }
+  setTimeout(() => { $("copyCmd").textContent = "Copy"; }, 2000);
+});
+
+detectCompanion();
+setInterval(() => {
+  if (document.hidden) return;
+  if (comp.state === "ready") readVolume();
+  else if (comp.state === "missing" || comp.state === "pair") detectCompanion();
+}, 2000);
 
 // If permission was granted before, list input names right away.
 if (supported && navigator.permissions) {
